@@ -376,16 +376,22 @@ async function loadFredData() {
 async function fetchYahooParsed(ticker) {
   const now = Math.floor(Date.now()/1000);
   const from = now - 60*24*3600*2;
-  const yfBase = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1mo&period1=${from}&period2=${now}`;
+  const yfPath = `v8/finance/chart/${encodeURIComponent(ticker)}?interval=1mo&period1=${from}&period2=${now}`;
+  const yfBase = `https://query1.finance.yahoo.com/${yfPath}`;
+  
+  // Only use the most reliable proxy and increase wait time to 15s
+  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(yfBase)}`;
   
   try {
-    // Increased timeout to 20 seconds for stability
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yfBase)}`, { signal: AbortSignal.timeout(20000) });
-    const json = await res.json();
-    const data = JSON.parse(json.contents);
-    const closes = data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(v => v != null);
-    return closes || null;
+    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const raw = await res.json();
+    const json = JSON.parse(raw.contents);
+    const closes = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(v=>v!=null);
+    if (!closes || closes.length===0) throw new Error('empty');
+    return closes;
   } catch(e) {
+    console.warn(`Proxy failed ${ticker}:`, e.message);
     return null;
   }
 }
