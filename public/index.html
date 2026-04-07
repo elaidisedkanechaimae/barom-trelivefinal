@@ -353,22 +353,25 @@ async function loadAllData(){
 async function loadFredData() {
   if (!fredKey) return false;
   try {
-    const fetchFred = async (id) => {
-      const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}&limit=60&sort_order=desc&api_key=${fredKey}`;
-      // Wrap the URL in the proxy to fix the CORS error you see in the console
-      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-      const json = await res.json();
-      return json.contents.trim().split('\n').slice(1).map(r => parseFloat(r.split(',')[1])).filter(v => !isNaN(v));
-    };
+    // 1. Fetch CPI
+    const cpiUrl = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL&limit=60&sort_order=desc&api_key=${fredKey}`;
+    const cpiRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(cpiUrl)}`);
+    if (!cpiRes.ok) throw new Error('CPI failed');
+    const cpiJson = await cpiRes.json();
+    const cpiRows = cpiJson.contents.trim().split('\n').slice(1).map(r=>parseFloat(r.split(',')[1])).filter(v=>!isNaN(v));
+    liveData.cpi = { value:cpiRows[0], history:cpiRows.slice(0,60).reverse() };
 
-    const cpiRows = await fetchFred('CPIAUCSL');
-    liveData.cpi = { value: cpiRows[0], history: cpiRows.slice(0, 60).reverse() };
-
-    const gdpRows = await fetchFred('A191RL1A225NBEA');
-    liveData.gdp = { value: gdpRows[0], history: gdpRows.slice(0, 5).reverse() };
+    // 2. Fetch GDP
+    const gdpUrl = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=A191RL1A225NBEA&limit=10&sort_order=desc&api_key=${fredKey}`;
+    const gdpRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(gdpUrl)}`);
+    if (!gdpRes.ok) throw new Error('GDP failed');
+    const gdpJson = await gdpRes.json();
+    const gdpRows = gdpJson.contents.trim().split('\n').slice(1).map(r=>parseFloat(r.split(',')[1])).filter(v=>!isNaN(v));
+    liveData.gdp = { value:gdpRows[0], history:gdpRows.slice(0,5).reverse() };
     
     return true;
   } catch(e) {
+    console.error("FRED Error:", e);
     liveData.cpi = FALLBACK.cpi; liveData.gdp = FALLBACK.gdp; return false;
   }
 }
