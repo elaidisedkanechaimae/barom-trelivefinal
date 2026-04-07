@@ -414,26 +414,57 @@ function computeZ(history){
   const std=Math.sqrt(history.reduce((s,v)=>s+Math.pow(v-mean,2),0)/(n-1));
   return std===0?0:(history[n-1]-mean)/std;
 }
-function computeAndRender(){
-  const results=INDICATORS.map(ind=>{
-    const dat=liveData[ind.id]||FALLBACK[ind.id];
-    const hist=dat.history||FALLBACK[ind.id].history;
-    let z=computeZ(hist);
-    if(ind.inverted)z=-z;
-    return{...ind,value:dat.value,history:hist,z,contrib:z*ind.weight};
+function computeAndRender() {
+  // 1. Map indicators to their live data OR fallback data
+  const results = INDICATORS.map(ind => {
+    const dat = liveData[ind.id] || FALLBACK[ind.id];
+    // CRITICAL: Ensure we grab the full history array for the chart
+    const hist = dat.history || FALLBACK[ind.id].history;
+    
+    let z = computeZ(hist);
+    if (ind.inverted) z = -z;
+    
+    return { 
+      ...ind, 
+      value: dat.value, 
+      history: hist, // Passing history here is the "fuel" for the chart
+      z: z, 
+      contrib: z * ind.weight 
+    };
   });
-  const scoreFinal=parseFloat(Math.max(-10,Math.min(10,results.reduce((s,r)=>s+r.contrib,0)*3)).toFixed(2));
-  lastResults=results;lastScore=scoreFinal;
-  renderScore(scoreFinal);renderMetrics(results);renderContrib(results);buildLineChart();buildRadarChart(results);
-  const el=document.getElementById('st-score');
-  el.textContent=`Score: ${scoreFinal>=0?'+':''}${scoreFinal.toFixed(2)}`;
-  el.className='status-pill pill-ok';el.dataset.state='ok';
-  const d=new Date().toLocaleString(lang==='fr'?'fr-FR':'en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  document.getElementById('lastUpdate').textContent=t('lastUpdateFmt',d);
-  document.getElementById('aiRefreshBtn').disabled=false;
-  runAI(results,scoreFinal);
-}
 
+  // 2. Calculate the Final Global Score
+  const scoreBrut = results.reduce((s, r) => s + r.contrib, 0);
+  const scoreFinal = parseFloat(Math.max(-10, Math.min(10, scoreBrut * 3)).toFixed(2));
+  
+  // 3. Store for global access
+  lastResults = results;
+  lastScore = scoreFinal;
+
+  // 4. Update the UI Components
+  renderScore(scoreFinal);
+  renderMetrics(results);
+  renderContrib(results);
+  
+  // THE KEY CHANGE: We pass 'results' into the chart functions
+  buildLineChart(results); 
+  buildRadarChart(results);
+
+  // 5. Update Status Bar & Time
+  const el = document.getElementById('st-score');
+  el.textContent = `Score: ${scoreFinal >= 0 ? '+' : ''}${scoreFinal.toFixed(2)}`;
+  el.className = 'status-pill pill-ok';
+  el.dataset.state = 'ok';
+
+  const d = new Date().toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+  document.getElementById('lastUpdate').textContent = t('lastUpdateFmt', d);
+
+  // 6. Trigger the Strategy AI
+  document.getElementById('aiRefreshBtn').disabled = false;
+  runAI(results, scoreFinal);
+}
 function renderScore(score){
   const el=document.getElementById('scoreNum'),badge=document.getElementById('scoreBadge'),txt=document.getElementById('badgeText');
   el.textContent=(score>=0?'+':'')+score.toFixed(2);
@@ -473,35 +504,55 @@ function renderContrib(results){
   }).join('');
 }
 function buildLineChart(results) {
-  // Use CPI history as the master timeline (usually has the most points)
-  const masterHist = liveData.cpi ? liveData.cpi.history : FALLBACK.cpi.history;
-  const n = Math.min(24, masterHist.length - 1); 
+  if (lineChartInst) lineChartInst.destroy();
   
-  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  // We look back 24 months
+  const n = 24; 
   const labels = Array.from({length: n}, (_, i) => {
     const d = new Date(); d.setMonth(d.getMonth() - (n - 1 - i));
-    return d.toLocaleDateString(locale, {month: 'short', year: '2-digit'});
+    return d.toLocaleDateString('fr-FR', {month: 'short', year: '2-digit'});
   });
 
-  // Calculate the score for each of the last 24 months
   const scores = Array.from({length: n}, (_, i) => {
-    let s = 0;
-    INDICATORS.forEach((ind) => {
-      const data = liveData[ind.id] || FALLBACK[ind.id];
-      const h = data.history;
-      // Find the historical index for this specific month
+    let monthlyScore = 0;
+    results.forEach(res => {
+      const h = res.history;
+      // Find the data point for this specific month in the past
       const idx = h.length - n + i; 
-      if (idx < 2) return;
-      
-      // Calculate a simple rolling Z-score for that point in time
-      const subHistory = h.slice(0, idx + 1);
-      let z = computeZ(subHistory);
-      if (ind.inverted) z = -z;
-      s += z * ind.weight;
+      if (idx >= 2) {
+        const subHist = h.slice(0, idx + 1);
+        let z = computeZ(subHist);
+        if (res.inverted) z = -z;
+        monthlyScore += z * res.weight;
+      }
     });
-    return parseFloat(Math.max(-10, Math.min(10, s * 3)).toFixed(2));
+    return parseFloat(Math.max(-10, Math.min(10, monthlyScore * 3)).toFixed(2));
   });
 
+  lineChartInst = new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Score Macro',
+        data: scores,
+        borderColor: '#8b7cf8',
+        backgroundColor: 'rgba(139,124,248,0.1)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#6b7a99' } },
+        x: { grid: { display: false }, ticks: { color: '#6b7a99' } }
+      }
+    }
+  });
+}
   // ... rest of your existing Chart.js code (lineChartInst, etc.)
 function updateLineChartLocale(){
   if(!lineChartInst)return;
