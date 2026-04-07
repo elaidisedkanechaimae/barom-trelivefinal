@@ -353,21 +353,20 @@ async function loadAllData(){
 async function loadFredData() {
   if (!fredKey) return false;
   try {
-    // 1. Fetch CPI
-    const cpiUrl = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL&limit=60&sort_order=desc&api_key=${fredKey}`;
-    const cpiRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(cpiUrl)}`);
-    if (!cpiRes.ok) throw new Error('CPI failed');
-    const cpiJson = await cpiRes.json();
-    const cpiRows = cpiJson.contents.trim().split('\n').slice(1).map(r=>parseFloat(r.split(',')[1])).filter(v=>!isNaN(v));
-    liveData.cpi = { value:cpiRows[0], history:cpiRows.slice(0,60).reverse() };
+    const fetchFred = async (id, limit) => {
+      // We increase the limit to 84 to have 60 months for the Z-score mean + 24 months for the history chart
+      const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}&limit=${limit}&sort_order=desc&api_key=${fredKey}`;
+      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      const json = await res.json();
+      return json.contents.trim().split('\n').slice(1).map(r => parseFloat(r.split(',')[1])).filter(v => !isNaN(v));
+    };
 
-    // 2. Fetch GDP
-    const gdpUrl = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=A191RL1A225NBEA&limit=10&sort_order=desc&api_key=${fredKey}`;
-    const gdpRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(gdpUrl)}`);
-    if (!gdpRes.ok) throw new Error('GDP failed');
-    const gdpJson = await gdpRes.json();
-    const gdpRows = gdpJson.contents.trim().split('\n').slice(1).map(r=>parseFloat(r.split(',')[1])).filter(v=>!isNaN(v));
-    liveData.gdp = { value:gdpRows[0], history:gdpRows.slice(0,5).reverse() };
+    // Get 84 months of CPI and 40 units of GDP (since GDP is quarterly)
+    const cpiRows = await fetchFred('CPIAUCSL', 84); 
+    liveData.cpi = { value: cpiRows[0], history: [...cpiRows].reverse() };
+
+    const gdpRows = await fetchFred('A191RL1A225NBEA', 40); 
+    liveData.gdp = { value: gdpRows[0], history: [...gdpRows].reverse() };
     
     return true;
   } catch(e) {
@@ -375,10 +374,9 @@ async function loadFredData() {
     liveData.cpi = FALLBACK.cpi; liveData.gdp = FALLBACK.gdp; return false;
   }
 }
-
 async function fetchYahooParsed(ticker) {
   const now = Math.floor(Date.now()/1000);
-  const from = now - 60*24*3600*2;
+  const from = now - (3600 * 24 * 365 * 5);
   const yfPath = `v8/finance/chart/${encodeURIComponent(ticker)}?interval=1mo&period1=${from}&period2=${now}`;
   const yfBase = `https://query1.finance.yahoo.com/${yfPath}`;
   
@@ -474,25 +472,37 @@ function renderContrib(results){
       <div class="contrib-num" style="color:${color};">${r.contrib>=0?'+':''}${r.contrib.toFixed(3)}</div></div>`;
   }).join('');
 }
-function buildLineChart(){
-  const hist=(liveData.cpi||FALLBACK.cpi).history;
-  const n=Math.min(24,hist.length);
-  const locale=lang==='fr'?'fr-FR':'en-GB';
-  const labels=Array.from({length:n},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-(n-1-i));return d.toLocaleDateString(locale,{month:'short',year:'2-digit'});});
-  const allInds=INDICATORS.map(ind=>liveData[ind.id]||FALLBACK[ind.id]);
-  const scores=Array.from({length:n},(_,i)=>{
-    let s=0;
-    INDICATORS.forEach((ind,j)=>{const h=allInds[j].history||FALLBACK[ind.id].history;const idx=h.length-n+i;if(idx<5)return;let z=computeZ(h.slice(Math.max(0,idx-59),idx+1));if(ind.inverted)z=-z;s+=z*ind.weight;});
-    return parseFloat(Math.max(-10,Math.min(10,s*3)).toFixed(2));
+function buildLineChart(results) {
+  // Use CPI history as the master timeline (usually has the most points)
+  const masterHist = liveData.cpi ? liveData.cpi.history : FALLBACK.cpi.history;
+  const n = Math.min(24, masterHist.length - 1); 
+  
+  const locale = lang === 'fr' ? 'fr-FR' : 'en-GB';
+  const labels = Array.from({length: n}, (_, i) => {
+    const d = new Date(); d.setMonth(d.getMonth() - (n - 1 - i));
+    return d.toLocaleDateString(locale, {month: 'short', year: '2-digit'});
   });
-  if(lineChartInst)lineChartInst.destroy();
-  lineChartInst=new Chart(document.getElementById('lineChart'),{
-    type:'line',data:{labels,datasets:[{data:scores,borderColor:'#8b7cf8',backgroundColor:'rgba(139,124,248,0.07)',borderWidth:2,pointRadius:2.5,fill:true,tension:0.35,pointBackgroundColor:scores.map(v=>v>=2?'#22d3a0':v<=-2?'#f05252':'#f5a623')}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a2235',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#6b7a99',bodyColor:'#e8edf5',callbacks:{label:c=>` Score: ${c.raw>0?'+':''}${c.raw}`}}},
-      scales:{x:{ticks:{color:'#6b7a99',font:{size:10},maxRotation:45},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.08)'}},
-              y:{ticks:{color:'#6b7a99',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.08)'},suggestedMin:-3,suggestedMax:3}}}
+
+  // Calculate the score for each of the last 24 months
+  const scores = Array.from({length: n}, (_, i) => {
+    let s = 0;
+    INDICATORS.forEach((ind) => {
+      const data = liveData[ind.id] || FALLBACK[ind.id];
+      const h = data.history;
+      // Find the historical index for this specific month
+      const idx = h.length - n + i; 
+      if (idx < 2) return;
+      
+      // Calculate a simple rolling Z-score for that point in time
+      const subHistory = h.slice(0, idx + 1);
+      let z = computeZ(subHistory);
+      if (ind.inverted) z = -z;
+      s += z * ind.weight;
+    });
+    return parseFloat(Math.max(-10, Math.min(10, s * 3)).toFixed(2));
   });
-}
+
+  // ... rest of your existing Chart.js code (lineChartInst, etc.)
 function updateLineChartLocale(){
   if(!lineChartInst)return;
   const hist=(liveData.cpi||FALLBACK.cpi).history;const n=Math.min(24,hist.length);
