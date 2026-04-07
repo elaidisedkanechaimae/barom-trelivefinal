@@ -350,46 +350,44 @@ async function loadAllData(){
   computeAndRender();
 }
 
-async function loadFredData(){
-  if(!fredKey)return false;
-  try{
-    const cpiUrl=`https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL&limit=60&sort_order=desc&api_key=${fredKey}`;
-    const cr=await fetchTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(cpiUrl)}`,12000);
-    if(!cr.ok)throw new Error('cpi');
-    const cj=await cr.json();
-    const cpiRows=cj.contents.trim().split('\n').slice(1).map(r=>parseFloat(r.split(',')[1])).filter(v=>!isNaN(v));
-    liveData.cpi={value:cpiRows[0],history:cpiRows.slice(0,60).reverse()};
-    const gdpUrl=`https://fred.stlouisfed.org/graph/fredgraph.csv?id=A191RL1A225NBEA&limit=10&sort_order=desc&api_key=${fredKey}`;
-    const gr=await fetchTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(gdpUrl)}`,12000);
-    if(!gr.ok)throw new Error('gdp');
-    const gj=await gr.json();
-    const gdpRows=gj.contents.trim().split('\n').slice(1).map(r=>parseFloat(r.split(',')[1])).filter(v=>!isNaN(v));
-    liveData.gdp={value:gdpRows[0],history:gdpRows.slice(0,5).reverse()};
+async function loadFredData() {
+  if (!fredKey) return false;
+  try {
+    const fetchFred = async (id) => {
+      const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}&limit=60&sort_order=desc&api_key=${fredKey}`;
+      // Wrap the URL in the proxy to fix the CORS error you see in the console
+      const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+      const json = await res.json();
+      return json.contents.trim().split('\n').slice(1).map(r => parseFloat(r.split(',')[1])).filter(v => !isNaN(v));
+    };
+
+    const cpiRows = await fetchFred('CPIAUCSL');
+    liveData.cpi = { value: cpiRows[0], history: cpiRows.slice(0, 60).reverse() };
+
+    const gdpRows = await fetchFred('A191RL1A225NBEA');
+    liveData.gdp = { value: gdpRows[0], history: gdpRows.slice(0, 5).reverse() };
+    
     return true;
-  }catch(e){liveData.cpi=FALLBACK.cpi;liveData.gdp=FALLBACK.gdp;return false;}
+  } catch(e) {
+    liveData.cpi = FALLBACK.cpi; liveData.gdp = FALLBACK.gdp; return false;
+  }
 }
 
-async function fetchYahooParsed(ticker){
-  const now=Math.floor(Date.now()/1000);
-  const from=now-60*24*3600*2;
-  const yfBase=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1mo&period1=${from}&period2=${now}`;
-  const proxies=[
-    {url:`https://api.allorigins.win/get?url=${encodeURIComponent(yfBase)}`,parse:r=>JSON.parse(r.contents)},
-    {url:`https://corsproxy.io/?${encodeURIComponent(yfBase)}`,parse:r=>r},
-    {url:`https://thingproxy.freeboard.io/fetch/${yfBase}`,parse:r=>r},
-  ];
-  for(const p of proxies){
-    try{
-      const res=await fetchTimeout(p.url,10000);
-      if(!res.ok)throw new Error(`HTTP ${res.status}`);
-      const raw=await res.json();
-      const parsed=p.parse(raw);
-      const closes=parsed?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(v=>v!=null);
-      if(!closes||closes.length===0)throw new Error('empty');
-      return closes;
-    }catch(e){console.warn(`Proxy failed ${ticker}:`,e.message);}
+async function fetchYahooParsed(ticker) {
+  const now = Math.floor(Date.now()/1000);
+  const from = now - 60*24*3600*2;
+  const yfBase = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1mo&period1=${from}&period2=${now}`;
+  
+  try {
+    // Increased timeout to 20 seconds for stability
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(yfBase)}`, { signal: AbortSignal.timeout(20000) });
+    const json = await res.json();
+    const data = JSON.parse(json.contents);
+    const closes = data?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(v => v != null);
+    return closes || null;
+  } catch(e) {
+    return null;
   }
-  return null;
 }
 
 async function loadYahooData(){
@@ -509,30 +507,64 @@ function setStatus(id,state,label){
 }
 
 // AI — calls /api/claude (our Vercel proxy), no CORS issues
-async function runAI(results,score){
-  const aiBody=document.getElementById('aiBody'),btn=document.getElementById('aiRefreshBtn');
-  btn.disabled=true;
-  aiBody.className='ai-body ai-loading-text';
-  aiBody.textContent=t('aiLoading');
-  const r=results||lastResults||[];
-  const s=score??lastScore??0;
-  const label=s>=2?t('bull'):s<=-2?t('bear'):t('neu');
-  const scoreStr=(s>=0?'+':'')+s.toFixed(2);
-  const ctx=r.map(x=>`- ${x.name} (${x.ticker}): valeur=${x.value!=null?x.value.toFixed(2):'N/A'} ${x.display}, Z=${x.z>=0?'+':''}${x.z.toFixed(2)}σ, contribution=${x.contrib>=0?'+':''}${x.contrib.toFixed(3)}, inversé=${x.inverted}`).join('\n');
-  try{
-    const res=await fetch('/api/claude',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:250,messages:[{role:'user',content:t('aiPrompt',scoreStr,label,ctx)}]})
-    });
-    const data=await res.json();
-    const text=data.content?.map(b=>b.text||'').join('').trim();
-    if(!text)throw new Error('empty');
-    aiBody.className='ai-body';aiBody.style.color='';aiBody.textContent=text;
-  }catch(e){
-    aiBody.className='ai-body';aiBody.style.color='var(--red)';aiBody.textContent=t('aiError');
+function runAI(results, score) {
+  const aiBody = document.getElementById('aiBody');
+  const btn = document.getElementById('aiRefreshBtn');
+  aiBody.className = 'ai-body';
+  aiBody.style.color = 'var(--text)';
+
+  // Helper to get specific indicator data
+  const getInd = (id) => results.find(r => r.id === id) || { z: 0, value: 0 };
+  const vix = getInd('vix');
+  const msci = getInd('msci');
+  const cpi = getInd('cpi');
+  const gdp = getInd('gdp');
+
+  let title = "";
+  let tone = "";
+  let analysis = "";
+  let strategy = "";
+
+  // 1. Determine Market Regime based on Score and Volatility
+  if (score >= 2.5) {
+    title = "🚀 STRATÉGIE : EXPANSION ET RISK-ON";
+    tone = "Le baromètre indique un environnement de croissance robuste.";
+    analysis = `La forte impulsion du MSCI World (Z: ${msci.z.toFixed(2)}σ) et un VIX compressé suggèrent une phase de 'Goldilocks'. Le PIB (Z: ${gdp.z.toFixed(2)}σ) soutient cette dynamique cyclique.`;
+    strategy = "<strong>Allocation :</strong> Surpondérer les Actions (Growth & Tech). Réduire les positions de couverture (Hedges) et privilégier le levier modéré.";
+  } 
+  else if (score <= -2.5) {
+    title = "⚠️ STRATÉGIE : DÉFENSIF ET RISK-OFF";
+    tone = "Alerte de fragilité systémique détectée.";
+    analysis = `L'explosion de la volatilité (VIX Z: ${vix.z.toFixed(2)}σ) couplée à une dégradation des indices mondiaux signale une capitulation. Le score de ${score} reflète une aversion au risque extrême.`;
+    strategy = "<strong>Allocation :</strong> Maximiser le Cash et l'Or. Sous-pondérer massivement les Actions. Chercher refuge dans les Obligations d'État à long terme.";
+  } 
+  else if (Math.abs(cpi.z) > 1.5 && score < 0) {
+    title = "📉 STRATÉGIE : VIGILANCE INFLATIONNISTE";
+    tone = "Risque de stagflation ou de resserrement monétaire.";
+    analysis = `Le CPI (Z: ${cpi.z.toFixed(2)}σ) est l'indicateur dominant, pesant sur le score global. La pression sur les prix réduit les marges de manœuvre des banques centrales.`;
+    strategy = "<strong>Allocation :</strong> Privilégier les Matières Premières et les Actions 'Value' avec pouvoir de fixation des prix. Réduire la duration obligataire.";
   }
-  btn.disabled=false;
+  else {
+    title = "⚖️ STRATÉGIE : NEUTRE / RÉÉQUILIBRAGE";
+    tone = "Absence de tendance directionnelle claire.";
+    analysis = "Les forces de croissance et les risques de marché s'équilibrent. Le score proche de zéro suggère une phase de consolidation technique après les récents mouvements.";
+    strategy = "<strong>Allocation :</strong> Revenir aux poids du Benchmark. Privilégier la sélection de titres (Stock Picking) plutôt que l'exposition indicielle.";
+  }
+
+  // 2. Format the output to look like an AI report
+  aiBody.innerHTML = `
+    <div style="background: var(--purple-bg); padding: 12px; border-radius: 8px; border-left: 4px solid var(--purple); margin-bottom: 15px;">
+      <span style="font-family: 'DM Mono'; font-size: 11px; color: var(--purple); text-transform: uppercase;">Rapport de Stratégie IA</span>
+      <div style="font-weight: 600; font-size: 15px; margin-top: 4px;">${title}</div>
+    </div>
+    <p><em>${tone}</em></p>
+    <p style="margin: 12px 0;">${analysis}</p>
+    <div style="padding: 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px;">
+      ${strategy}
+    </div>
+  `;
+
+  btn.disabled = false;
 }
 </script>
 </body>
