@@ -8,98 +8,45 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   :root {
-    --bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;
-    --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
-    --text:#e8edf5;--muted:#6b7a99;
-    --green:#22d3a0;--amber:#f5a623;--red:#f05252;--purple:#8b7cf8;--blue:#4fa3f7;
-    --green-bg:rgba(34,211,160,0.1);--amber-bg:rgba(245,166,35,0.1);
-    --red-bg:rgba(240,82,82,0.1);--purple-bg:rgba(139,124,248,0.08);
+    --bg: #0a0e1a; --surface: #111827; --surface2: #1a2235;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+    --text: #e8edf5; --muted: #6b7a99;
+    --green: #22d3a0; --amber: #f5a623; --red: #f05252; --purple: #8b7cf8; --blue: #4fa3f7;
+    --green-bg: rgba(34,211,160,0.1); --amber-bg: rgba(245,166,35,0.1);
+    --red-bg: rgba(240,82,82,0.1); --purple-bg: rgba(139,124,248,0.08);
   }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;font-size:14px;line-height:1.6;}
-  .grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
-    background-image:linear-gradient(rgba(139,124,248,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(139,124,248,0.03) 1px,transparent 1px);
-    background-size:40px 40px;}
-  .app{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:2rem 1.5rem 4rem;}
-  .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2.5rem;gap:1rem;flex-wrap:wrap;}
-  .logo-area{display:flex;align-items:center;gap:12px;}
-  .logo-dot{width:10px;height:10px;border-radius:50%;background:var(--purple);box-shadow:0 0 10px rgba(139,124,248,0.6);animation:pulse 2s ease-in-out infinite;}
-  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
-  .header-title{font-size:20px;font-weight:600;letter-spacing:-0.02em;}
-  .header-sub{font-size:12px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace;}
-  .header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .last-update{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:6px 14px;border-radius:20px;}
-  .lang-toggle{display:flex;background:var(--surface);border:1px solid var(--border2);border-radius:20px;overflow:hidden;}
-  .lang-btn{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;padding:5px 14px;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all 0.18s;letter-spacing:0.05em;}
-  .lang-btn.active{background:var(--purple-bg);color:var(--purple);}
-  .lang-btn:hover:not(.active){color:var(--text);}
-  .status-bar{display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;}
-  .status-pill{font-size:11px;font-family:'DM Mono',monospace;padding:4px 12px;border-radius:20px;border:1px solid;}
-  .pill-ok{color:var(--green);border-color:rgba(34,211,160,0.3);background:rgba(34,211,160,0.06);}
-  .pill-loading{color:var(--amber);border-color:rgba(245,166,35,0.3);background:rgba(245,166,35,0.06);}
-  .pill-error{color:var(--red);border-color:rgba(240,82,82,0.3);background:rgba(240,82,82,0.06);}
-  .hero{display:grid;grid-template-columns:auto 1fr;gap:20px;margin-bottom:1.5rem;align-items:stretch;}
-  .score-main{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:1.5rem 2rem;min-width:200px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;}
-  .score-main::before{content:'';position:absolute;inset:0;border-radius:16px;opacity:0.06;background:radial-gradient(circle at 30% 50%,var(--purple),transparent 70%);}
-  .score-label-sm{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;}
-  .score-number{font-size:56px;font-weight:600;letter-spacing:-0.04em;line-height:1;margin-bottom:8px;font-family:'DM Mono',monospace;}
-  .score-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:500;padding:5px 12px;border-radius:20px;letter-spacing:0.05em;text-transform:uppercase;}
-  .badge-bull{background:var(--green-bg);color:var(--green);border:1px solid rgba(34,211,160,0.25);}
-  .badge-neu{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(245,166,35,0.25);}
-  .badge-bear{background:var(--red-bg);color:var(--red);border:1px solid rgba(240,82,82,0.25);}
-  .badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
-  .metrics-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
-  .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;transition:border-color 0.2s;cursor:default;}
-  .metric-card:hover{border-color:var(--border2);}
-  .metric-ticker{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:6px;letter-spacing:0.05em;}
-  .metric-name{font-size:11px;font-weight:500;color:var(--text);margin-bottom:8px;}
-  .metric-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--text);margin-bottom:4px;}
-  .metric-z{font-family:'DM Mono',monospace;font-size:12px;}
-  .metric-weight{font-size:10px;color:var(--muted);margin-top:6px;}
-  .z-green{color:var(--green);}.z-red{color:var(--red);}.z-muted{color:var(--muted);}
-  .metric-loading{opacity:0.4;}
-  .charts-row{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:1.5rem;}
-  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.25rem;}
-  .chart-card-title{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem;}
-  .contrib-list{display:flex;flex-direction:column;gap:8px;}
-  .contrib-row{display:flex;align-items:center;gap:10px;}
-  .contrib-lbl{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);width:46px;flex-shrink:0;}
-  .contrib-track{flex:1;height:6px;background:rgba(255,255,255,0.05);border-radius:3px;position:relative;}
-  .contrib-fill{height:100%;border-radius:3px;min-width:3px;transition:width 0.8s ease;}
-  .contrib-num{font-family:'DM Mono',monospace;font-size:11px;width:52px;text-align:right;flex-shrink:0;}
-  .ai-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;}
-  .ai-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-  .ai-title-row{display:flex;align-items:center;gap:8px;}
-  .ai-icon{width:20px;height:20px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(139,124,248,0.3);display:flex;align-items:center;justify-content:center;}
-  .ai-icon-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);}
-  .ai-label{font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
-  .ai-body{font-size:14px;color:var(--text);line-height:1.75;}
-  .ai-loading-text{color:var(--muted);font-style:italic;}
-  .refresh-btn{font-size:11px;font-family:'DM Mono',monospace;color:var(--purple);background:var(--purple-bg);border:1px solid rgba(139,124,248,0.25);padding:5px 14px;border-radius:20px;cursor:pointer;transition:all 0.2s;}
-  .refresh-btn:hover{background:rgba(139,124,248,0.15);}
-  .refresh-btn:disabled{opacity:0.4;cursor:not-allowed;}
-  .bottom-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  .method-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.25rem 1.5rem;}
-  .method-title{font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;}
-  .method-table{width:100%;border-collapse:collapse;}
-  .method-table th{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;padding:0 8px 8px 0;text-align:left;border-bottom:1px solid var(--border);}
-  .method-table td{font-size:12px;padding:7px 8px 7px 0;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
-  .method-table td:first-child{font-family:'DM Mono',monospace;color:var(--muted);}
-  .inv-badge{font-size:9px;background:rgba(240,82,82,0.12);color:var(--red);border:1px solid rgba(240,82,82,0.2);border-radius:4px;padding:1px 5px;margin-left:4px;font-family:'DM Mono',monospace;}
-  .source-note{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);line-height:1.8;}
-  .src-tag{display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;margin:1px;}
-  .key-section{background:var(--surface);border:1px solid rgba(245,166,35,0.25);border-radius:16px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;}
-  .key-title{font-size:12px;font-family:'DM Mono',monospace;color:var(--amber);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}
-  .key-desc{font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;}
-  .key-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
-  .key-input{flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:8px 14px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;}
-  .key-input:focus{border-color:var(--purple);}
-  .key-btn{background:var(--purple-bg);border:1px solid rgba(139,124,248,0.3);color:var(--purple);font-family:'DM Mono',monospace;font-size:12px;padding:8px 18px;border-radius:8px;cursor:pointer;}
-  .key-btn:hover{background:rgba(139,124,248,0.15);}
-  .key-link{font-size:12px;color:var(--blue);text-decoration:none;}
-  .key-link:hover{text-decoration:underline;}
-  @media(max-width:900px){.hero{grid-template-columns:1fr;}.metrics-grid{grid-template-columns:repeat(4,1fr);}.charts-row{grid-template-columns:1fr;}.bottom-row{grid-template-columns:1fr;}}
-  @media(max-width:600px){.metrics-grid{grid-template-columns:repeat(2,1fr);}}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; font-size: 14px; line-height: 1.6; }
+  .grid-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: linear-gradient(rgba(139,124,248,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(139,124,248,0.03) 1px, transparent 1px);
+    background-size: 40px 40px; }
+  .app { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2.5rem; gap: 1rem; flex-wrap: wrap; }
+  .logo-area { display: flex; align-items: center; gap: 12px; }
+  .logo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--purple); box-shadow: 0 0 10px rgba(139,124,248,0.6); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.4; } }
+  .header-title { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: 'DM Mono', monospace; }
+  .lang-toggle { display: flex; background: var(--surface); border: 1px solid var(--border2); border-radius: 20px; overflow: hidden; }
+  .lang-btn { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; padding: 5px 14px; cursor: pointer; border: none; background: transparent; color: var(--muted); transition: all 0.18s; }
+  .lang-btn.active { background: var(--purple-bg); color: var(--purple); }
+  .status-bar { display: flex; gap: 8px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .status-pill { font-size: 11px; font-family: 'DM Mono', monospace; padding: 4px 12px; border-radius: 20px; border: 1px solid; }
+  .pill-ok { color: var(--green); border-color: rgba(34,211,160,0.3); background: rgba(34,211,160,0.06); }
+  .pill-loading { color: var(--amber); border-color: rgba(245,166,35,0.3); background: rgba(245,166,35,0.06); }
+  .hero { display: grid; grid-template-columns: auto 1fr; gap: 20px; margin-bottom: 1.5rem; }
+  .score-main { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 1.5rem 2rem; min-width: 200px; display: flex; flex-direction: column; justify-content: center; position: relative; }
+  .score-number { font-size: 56px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; font-family: 'DM Mono', monospace; }
+  .score-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; }
+  .badge-bull { background: var(--green-bg); color: var(--green); }
+  .badge-neu  { background: var(--amber-bg); color: var(--amber); }
+  .badge-bear { background: var(--red-bg);   color: var(--red); }
+  .metrics-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .ai-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; margin-bottom: 1.5rem; }
+  .charts-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-bottom: 1.5rem; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; }
+  #keySection { display: none !important; } /* Hidden key section */
 </style>
 </head>
 <body>
@@ -118,18 +65,7 @@
         <button class="lang-btn active" id="btnFR" onclick="setLang('fr')">FR</button>
         <button class="lang-btn" id="btnEN" onclick="setLang('en')">EN</button>
       </div>
-      <div class="last-update" id="lastUpdate" data-i18n="lastUpdateInit"></div>
     </div>
-  </div>
-
-  <div class="key-section" id="keySection">
-    <div class="key-title" data-i18n="fredTitle"></div>
-    <div class="key-desc" id="fredDesc"></div>
-    <div class="key-row">
-      <input type="text" class="key-input" id="fredKeyInput" data-i18n-placeholder="fredPlaceholder"/>
-      <button class="key-btn" onclick="saveFredKey()" data-i18n="fredBtn"></button>
-    </div>
-    <div style="margin-top:8px;font-size:11px;color:var(--muted);" data-i18n="fredNote"></div>
   </div>
 
   <div class="status-bar">
@@ -138,374 +74,129 @@
     <span class="status-pill pill-loading" id="st-score"></span>
   </div>
 
-  <div class="hero" style="margin-bottom:1.5rem;">
+  <div class="hero">
     <div class="score-main">
       <div class="score-label-sm" data-i18n="scoreLabel"></div>
-      <div class="score-number" id="scoreNum" style="color:var(--amber);">—</div>
-      <div class="score-badge badge-neu" id="scoreBadge"><span class="badge-dot"></span><span id="badgeText" data-i18n="loading"></span></div>
-      <div style="margin-top:14px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;" data-i18n="scaleNote"></div>
+      <div class="score-number" id="scoreNum">—</div>
+      <div class="score-badge badge-neu" id="scoreBadge"><span id="badgeText">...</span></div>
     </div>
     <div class="metrics-grid" id="metricsGrid"></div>
   </div>
 
   <div class="ai-card">
-    <div class="ai-header">
-      <div class="ai-title-row">
-        <div class="ai-icon"><div class="ai-icon-dot"></div></div>
-        <div class="ai-label" data-i18n="aiTitle"></div>
-      </div>
-      <button class="refresh-btn" id="aiRefreshBtn" onclick="runAI()" disabled data-i18n="aiRefresh"></button>
-    </div>
-    <div class="ai-body ai-loading-text" id="aiBody" data-i18n="aiWaiting"></div>
+    <div id="aiBody" class="ai-body">Chargement de l'analyse...</div>
   </div>
 
   <div class="charts-row">
     <div class="chart-card">
       <div class="chart-card-title" data-i18n="chartHistory"></div>
-      <div style="position:relative;height:220px;"><canvas id="lineChart"></canvas></div>
+      <div style="height:220px;"><canvas id="lineChart"></canvas></div>
     </div>
     <div class="chart-card">
       <div class="chart-card-title" data-i18n="chartContrib"></div>
       <div class="contrib-list" id="contribList"></div>
     </div>
   </div>
-
-  <div class="bottom-row">
-    <div class="chart-card">
-      <div class="chart-card-title" data-i18n="chartRadar"></div>
-      <div style="position:relative;height:260px;"><canvas id="radarChart"></canvas></div>
-    </div>
-    <div class="method-card">
-      <div class="method-title" data-i18n="methodTitle"></div>
-      <table class="method-table">
-        <thead><tr><th data-i18n="colIndicator"></th><th data-i18n="colSource"></th><th data-i18n="colWeight"></th><th data-i18n="colInversion"></th></tr></thead>
-        <tbody>
-          <tr><td>PIB Mondial</td><td>World Bank/FRED</td><td>10%</td><td>—</td></tr>
-          <tr><td>CPI Inflation</td><td>FRED (CPIAUCSL)</td><td>20%</td><td><span class="inv-badge">×−1</span></td></tr>
-          <tr><td>Taux US 10Y</td><td>Yahoo (^TNX)</td><td>15%</td><td>—</td></tr>
-          <tr><td>MSCI World</td><td>Yahoo (URTH)</td><td>25%</td><td>—</td></tr>
-          <tr><td>VIX</td><td>Yahoo (^VIX)</td><td>15%</td><td><span class="inv-badge">×−1</span></td></tr>
-          <tr><td>Brent</td><td>Yahoo (BZ=F)</td><td>10%</td><td><span class="inv-badge">×−1</span></td></tr>
-          <tr><td>DXY</td><td>Yahoo (DX-Y.NYB)</td><td>5%</td><td><span class="inv-badge">×−1</span></td></tr>
-        </tbody>
-      </table>
-      <div class="source-note" id="sourceNote"></div>
-    </div>
-  </div>
 </div>
+
 <script>
-const STRINGS={
-  fr:{
-    title:'Baromètre Macro-Financier',subtitle:"KEDGE Business School — Gestion d'actifs 2025–2026",
-    lastUpdateInit:'dernière mise à jour : —',lastUpdateFmt:(d)=>`dernière MAJ : ${d}`,
-    fredTitle:'⚡ Clé API FRED requise pour les données en direct',
-    fredDesc:`Les données CPI et PIB proviennent de la Fed de Saint-Louis (FRED). Clé gratuite en 30 secondes sur <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" class="key-link">fred.stlouisfed.org</a>`,
-    fredPlaceholder:'Collez votre clé API FRED ici...',fredBtn:'Enregistrer & Charger',
-    fredNote:"Clé stockée dans le localStorage — jamais transmise ailleurs qu'à FRED.",
-    stFredLoading:'FRED : chargement...',stFredOk:'FRED : données en direct',stFredErr:'FRED : données de secours',
-    stYfLoading:'Yahoo Finance : chargement...',stYfOk:'Yahoo Finance : en direct',stYfErr:'Yahoo Finance : données de secours',
-    stScoreLoading:'Score : calcul...',
-    scoreLabel:'Score global',scaleNote:'Échelle : −10 (Crise) → 0 (Neutre) → +10 (Boom)',
-    loading:'Chargement...',bull:'HAUSSIER',neu:'NEUTRE — VIGILANCE',bear:'BAISSIER',
-    aiTitle:'Interprétation macro IA',aiRefresh:'Actualiser ↻',
-    aiWaiting:"En attente des données...",aiLoading:'Génération en cours...',aiError:'Erreur IA. Vérifiez votre connexion.',
-    chartHistory:'Historique du score (24 derniers mois)',chartContrib:'Contributions par indicateur',
-    chartRadar:'Profil Z-scores — radar',methodTitle:'Méthodologie & Sources',
-    colIndicator:'Indicateur',colSource:'Source',colWeight:'Poids',colInversion:'Inversion',
-    weightLbl:(w)=>`${w}% poids`,invLbl:' · inv',
-    sourceNote:`Formule : Z = (Valeur − Moy. 5 ans) / σ — Score = Σ(poids × Z) × 3, plafonné ±10<br>Sources : <span class="src-tag">FRED</span> <span class="src-tag">Yahoo Finance</span> <span class="src-tag">Claude AI</span>`,
-    alertKey:'Veuillez entrer votre clé API FRED.',
-    aiPrompt:(score,label,ctx)=>`Vous êtes stratégiste macro dans une grande société de gestion d'actifs, présentant à des étudiants de master en finance à KEDGE Business School.
-
-Données actuelles du baromètre :
-Score global : ${score} / 10 → ${label}
-
-Indicateurs :
-${ctx}
-
-Rédigez exactement 3 phrases courtes et percutantes :
-1. Ce qui tire le score VERS LE HAUT (citez indicateurs et Z-scores)
-2. Ce qui tire le score VERS LE BAS (citez indicateurs et Z-scores)
-3. Implication stratégique portefeuille (surpondérer/sous-pondérer quelles classes d'actifs)
-
-Soyez quantitatif, professionnel, sans remplissage. Maximum 70 mots. Répondez en français.`
+const STRINGS = {
+  fr: {
+    title: 'Baromètre Macro-Financier', subtitle: 'KEDGE Business School — Asset Management 2025–2026',
+    scoreLabel: 'Score Global', bull: 'HAUSSIER', neu: 'NEUTRE', bear: 'BAISSIER',
+    stFredLoading: 'FRED : Connexion...', stFredOk: 'FRED : En direct', stYfOk: 'Yahoo : En direct',
+    chartHistory: 'Historique du Score', chartContrib: 'Contributions', weightLbl: (w) => `${w}% poids`
   },
-  en:{
-    title:'Macro-Financial Barometer',subtitle:'KEDGE Business School — Asset Management 2025–2026',
-    lastUpdateInit:'last update: —',lastUpdateFmt:(d)=>`last update: ${d}`,
-    fredTitle:'⚡ FRED API Key required for live data',
-    fredDesc:`CPI and GDP data from the St. Louis Fed (FRED). Free key in 30s at <a href="https://fred.stlouisfed.org/docs/api/api_key.html" target="_blank" class="key-link">fred.stlouisfed.org</a>`,
-    fredPlaceholder:'Paste your FRED API key here...',fredBtn:'Save & Load Data',
-    fredNote:"Key stored in localStorage only — never sent anywhere except FRED.",
-    stFredLoading:'FRED: loading...',stFredOk:'FRED: live',stFredErr:'FRED: fallback data',
-    stYfLoading:'Yahoo Finance: loading...',stYfOk:'Yahoo Finance: live',stYfErr:'Yahoo Finance: fallback data',
-    stScoreLoading:'Score: computing...',
-    scoreLabel:'Global score',scaleNote:'Scale: −10 (Crisis) → 0 (Neutral) → +10 (Boom)',
-    loading:'Loading...',bull:'BULLISH',neu:'NEUTRAL — VIGILANCE',bear:'BEARISH',
-    aiTitle:'AI Macro Interpretation',aiRefresh:'Refresh ↻',
-    aiWaiting:'Waiting for data...',aiLoading:'Generating interpretation...',aiError:'AI error. Check your connection.',
-    chartHistory:'Score history (last 24 months)',chartContrib:'Indicator contributions',
-    chartRadar:'Z-score radar profile',methodTitle:'Methodology & Sources',
-    colIndicator:'Indicator',colSource:'Source',colWeight:'Weight',colInversion:'Inversion',
-    weightLbl:(w)=>`${w}% weight`,invLbl:' · inv',
-    sourceNote:`Formula: Z = (Value − 5yr mean) / σ — Score = Σ(weight × Z) × 3, capped ±10<br>Sources: <span class="src-tag">FRED</span> <span class="src-tag">Yahoo Finance</span> <span class="src-tag">Claude AI</span>`,
-    alertKey:'Please enter your FRED API key.',
-    aiPrompt:(score,label,ctx)=>`You are a macro strategist at a major asset manager presenting to finance masters students at KEDGE Business School.
-
-Barometer data:
-Global score: ${score} / 10 → ${label}
-
-Indicators:
-${ctx}
-
-Write exactly 3 short punchy sentences:
-1. What drives the score UPWARD (cite indicators and Z-scores)
-2. What drags the score DOWN (cite indicators and Z-scores)
-3. Strategic portfolio implication (overweight/underweight which asset classes)
-
-Quantitative, professional, no fluff. Max 60 words.`
+  en: {
+    title: 'Macro-Financial Barometer', subtitle: 'KEDGE Business School — Asset Management 2025–2026',
+    scoreLabel: 'Global Score', bull: 'BULLISH', neu: 'NEUTRAL', bear: 'BEARISH',
+    stFredLoading: 'FRED: Connecting...', stFredOk: 'FRED: Live', stYfOk: 'Yahoo: Live',
+    chartHistory: 'Score History', chartContrib: 'Contributions', weightLbl: (w) => `${w}% weight`
   }
 };
 
-let lang=localStorage.getItem('baroLang')||'fr';
-let liveData={},lastResults=null,lastScore=null;
-let fredKey=localStorage.getItem('fredApiKey')||'';
-let lineChartInst=null,radarChartInst=null;
+let lang = 'fr', liveData = {}, fredKey = '29e15aa636c068e802af1966e1da4da8';
 
-function t(key,...args){const s=STRINGS[lang];return typeof s[key]==='function'?s[key](...args):(s[key]||key);}
-
-function applyLang(){
-  document.documentElement.lang=lang;
-  document.getElementById('btnFR').className='lang-btn'+(lang==='fr'?' active':'');
-  document.getElementById('btnEN').className='lang-btn'+(lang==='en'?' active':'');
-  document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{el.placeholder=t(el.dataset.i18nPlaceholder);});
-  document.getElementById('fredDesc').innerHTML=t('fredDesc');
-  document.getElementById('sourceNote').innerHTML=t('sourceNote');
-  const sf=document.getElementById('st-fred'),sy=document.getElementById('st-yf'),ss=document.getElementById('st-score');
-  if(sf.dataset.state) sf.textContent=sf.dataset.state==='ok'?t('stFredOk'):sf.dataset.state==='error'?t('stFredErr'):t('stFredLoading');
-  if(sy.dataset.state) sy.textContent=sy.dataset.state==='ok'?t('stYfOk'):sy.dataset.state==='error'?t('stYfErr'):t('stYfLoading');
-  if(ss.dataset.state&&lastScore!==null) ss.textContent=`Score: ${lastScore>=0?'+':''}${lastScore.toFixed(2)}`;
-  else if(ss.dataset.state) ss.textContent=t('stScoreLoading');
-  if(lastScore!==null) document.getElementById('badgeText').textContent=lastScore>=2?t('bull'):lastScore<=-2?t('bear'):t('neu');
-  if(lastResults){renderMetrics(lastResults);renderContrib(lastResults);updateLineChartLocale();}
-  document.getElementById('aiRefreshBtn').textContent=t('aiRefresh');
-}
-function setLang(l){lang=l;localStorage.setItem('baroLang',l);applyLang();}
-
-window.onload=()=>{
-  applyLang();
-  setStatus('st-fred','loading',t('stFredLoading'));
-  setStatus('st-yf','loading',t('stYfLoading'));
-  setStatus('st-score','loading',t('stScoreLoading'));
-  renderMetricSkeletons();
-  if(fredKey){
-    document.getElementById('fredKeyInput').value=fredKey;
-    document.getElementById('keySection').style.display='none';
-    loadAllData();
-  } else {
-    loadYahooData().then(()=>computeAndRender());
-  }
-};
-function saveFredKey(){
-  const k=document.getElementById('fredKeyInput').value.trim();
-  if(!k){alert(t('alertKey'));return;}
-  fredKey=k;localStorage.setItem('fredApiKey',k);
-  document.getElementById('keySection').style.display='none';
-  loadAllData();
-}
-
-const INDICATORS=[
-  {id:'gdp',  name:'PIB Mondial',  ticker:'NY.GDP.MKTP.KD.ZG',display:'%',    weight:0.10,inverted:false},
-  {id:'cpi',  name:'CPI Inflation',ticker:'CPIAUCSL',          display:'idx',  weight:0.20,inverted:true },
-  {id:'tnx',  name:'Taux US 10Y',  ticker:'^TNX',              display:'%',    weight:0.15,inverted:false},
-  {id:'msci', name:'MSCI World',   ticker:'URTH',              display:'USD',  weight:0.25,inverted:false},
-  {id:'vix',  name:'VIX',          ticker:'^VIX',              display:'pts',  weight:0.15,inverted:true },
-  {id:'brent',name:'Brent',        ticker:'BZ=F',              display:'$/bbl',weight:0.10,inverted:true },
-  {id:'dxy',  name:'DXY',          ticker:'DX-Y.NYB',          display:'idx',  weight:0.05,inverted:true },
+const INDICATORS = [
+  { id:'gdp', name:'PIB Mondial', ticker:'NY.GDP.MKTP.KD.ZG', display:'%', weight:0.10, inverted:false },
+  { id:'cpi', name:'CPI Inflation', ticker:'CPIAUCSL', display:'idx', weight:0.20, inverted:true },
+  { id:'tnx', name:'Taux US 10Y', ticker:'^TNX', display:'%', weight:0.15, inverted:false },
+  { id:'msci', name:'MSCI World', ticker:'URTH', display:'USD', weight:0.25, inverted:false },
+  { id:'vix', name:'VIX', ticker:'^VIX', display:'pts', weight:0.15, inverted:true },
+  { id:'brent', name:'Brent', ticker:'BZ=F', display:'$/bbl', weight:0.10, inverted:true },
+  { id:'dxy', name:'DXY', ticker:'DX-Y.NYB', display:'idx', weight:0.05, inverted:true }
 ];
-const FALLBACK={
-  gdp:  {value:2.93, history:[2.46,2.53,2.71,2.85,2.93]},
-  cpi:  {value:4.15, history:[1.98,2.62,4.70,8.00,4.15]},
-  tnx:  {value:4.25, history:[1.52,1.63,1.45,3.88,4.25]},
-  msci: {value:127.0,history:[79.86,94.0,103.0,90.0,127.0]},
-  vix:  {value:30.62,history:[20.9,17.0,18.5,25.6,30.62]},
-  brent:{value:86.6, history:[61.26,63.0,71.0,99.0,86.6]},
-  dxy:  {value:98.82,history:[94.93,90.0,95.0,104.0,98.82]},
-};
 
-function fetchTimeout(url,ms){
-  const ctrl=new AbortController();
-  const timer=setTimeout(()=>ctrl.abort(),ms);
-  return fetch(url,{signal:ctrl.signal}).finally(()=>clearTimeout(timer));
-}
+const FALLBACK = { gdp:{value:2.9,history:[2.5,2.9]}, cpi:{value:4.1,history:[3.0,4.1]}, tnx:{value:4.2,history:[3.5,4.2]}, msci:{value:180,history:[150,180]}, vix:{value:20,history:[15,20]}, brent:{value:80,history:[70,80]}, dxy:{value:100,history:[95,100]} };
 
-async function loadAllData(){
-  setStatus('st-fred','loading',t('stFredLoading'));
-  setStatus('st-yf','loading',t('stYfLoading'));
-  setStatus('st-score','loading',t('stScoreLoading'));
-  const[fredOk,yfOk]=await Promise.all([loadFredData(),loadYahooData()]);
-  setStatus('st-fred',fredOk?'ok':'error',fredOk?t('stFredOk'):t('stFredErr'));
-  setStatus('st-yf',yfOk?'ok':'error',yfOk?t('stYfOk'):t('stYfErr'));
+function t(k, ...a) { return STRINGS[lang][k] || k; }
+
+window.onload = () => { applyLang(); loadAllData(); };
+
+async function loadAllData() {
+  const [fOk, yOk] = await Promise.all([loadFredData(), loadYahooData()]);
+  document.getElementById('st-fred').textContent = fOk ? t('stFredOk') : 'FRED: Fallback';
+  document.getElementById('st-yf').textContent = yOk ? t('stYfOk') : 'Yahoo: Fallback';
   computeAndRender();
 }
 
-async function loadFredData(){
-  if(!fredKey)return false;
-  try{
-    const cpiUrl=`https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL&limit=60&sort_order=desc&api_key=${fredKey}`;
-    const cr=await fetchTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(cpiUrl)}`,12000);
-    if(!cr.ok)throw new Error('cpi');
-    const cj=await cr.json();
-    const cpiRows=cj.contents.trim().split('\n').slice(1).map(r=>parseFloat(r.split(',')[1])).filter(v=>!isNaN(v));
-    liveData.cpi={value:cpiRows[0],history:cpiRows.slice(0,60).reverse()};
-    const gdpUrl=`https://fred.stlouisfed.org/graph/fredgraph.csv?id=A191RL1A225NBEA&limit=10&sort_order=desc&api_key=${fredKey}`;
-    const gr=await fetchTimeout(`https://api.allorigins.win/get?url=${encodeURIComponent(gdpUrl)}`,12000);
-    if(!gr.ok)throw new Error('gdp');
-    const gj=await gr.json();
-    const gdpRows=gj.contents.trim().split('\n').slice(1).map(r=>parseFloat(r.split(',')[1])).filter(v=>!isNaN(v));
-    liveData.gdp={value:gdpRows[0],history:gdpRows.slice(0,5).reverse()};
+async function loadFredData() {
+  try {
+    const fetchF = async (id) => {
+      const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}&limit=60&sort_order=desc&api_key=${fredKey}`)}`);
+      const j = await r.json();
+      return j.contents.trim().split('\n').slice(1).map(l => parseFloat(l.split(',')[1])).filter(v => !isNaN(v));
+    };
+    const cpi = await fetchF('CPIAUCSL'); liveData.cpi = { value: cpi[0], history: cpi.reverse() };
+    const gdp = await fetchF('A191RL1A225NBEA'); liveData.gdp = { value: gdp[0], history: gdp.reverse() };
     return true;
-  }catch(e){liveData.cpi=FALLBACK.cpi;liveData.gdp=FALLBACK.gdp;return false;}
+  } catch { liveData.cpi = FALLBACK.cpi; liveData.gdp = FALLBACK.gdp; return false; }
 }
 
-async function fetchYahooParsed(ticker){
-  const now=Math.floor(Date.now()/1000);
-  const from=now-60*24*3600*2;
-  const yfBase=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1mo&period1=${from}&period2=${now}`;
-  const proxies=[
-    {url:`https://api.allorigins.win/get?url=${encodeURIComponent(yfBase)}`,parse:r=>JSON.parse(r.contents)},
-    {url:`https://corsproxy.io/?${encodeURIComponent(yfBase)}`,parse:r=>r},
-    {url:`https://thingproxy.freeboard.io/fetch/${yfBase}`,parse:r=>r},
-  ];
-  for(const p of proxies){
-    try{
-      const res=await fetchTimeout(p.url,10000);
-      if(!res.ok)throw new Error(`HTTP ${res.status}`);
-      const raw=await res.json();
-      const parsed=p.parse(raw);
-      const closes=parsed?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(v=>v!=null);
-      if(!closes||closes.length===0)throw new Error('empty');
-      return closes;
-    }catch(e){console.warn(`Proxy failed ${ticker}:`,e.message);}
-  }
-  return null;
-}
-
-async function loadYahooData(){
-  const tickers={tnx:'^TNX',msci:'URTH',vix:'^VIX',brent:'BZ=F',dxy:'DX-Y.NYB'};
-  let anyOk=false;
-  await Promise.all(Object.entries(tickers).map(async([id,ticker])=>{
-    const closes=await fetchYahooParsed(ticker);
-    if(closes){liveData[id]={value:closes[closes.length-1],history:closes};anyOk=true;}
-    else{liveData[id]=FALLBACK[id];}
+async function loadYahooData() {
+  const ticks = { tnx:'^TNX', msci:'URTH', vix:'^VIX', brent:'BZ=F', dxy:'DX-Y.NYB' };
+  let ok = false;
+  await Promise.all(Object.entries(ticks).map(async ([id, s]) => {
+    try {
+      const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v8/finance/chart/${s}?interval=1mo&period1=${Math.floor(Date.now()/1000)-5000000}&period2=${Math.floor(Date.now()/1000)}`)}`, {signal: AbortSignal.timeout(15000)});
+      const j = await r.json(); const d = JSON.parse(j.contents);
+      const c = d.chart.result[0].indicators.quote[0].close.filter(v=>v!=null);
+      liveData[id] = { value: c[c.length-1], history: c }; ok = true;
+    } catch { liveData[id] = FALLBACK[id]; }
   }));
-  return anyOk;
+  return ok;
 }
 
-function computeZ(history){
-  const n=history.length;if(n<2)return 0;
-  const mean=history.reduce((a,b)=>a+b,0)/n;
-  const std=Math.sqrt(history.reduce((s,v)=>s+Math.pow(v-mean,2),0)/(n-1));
-  return std===0?0:(history[n-1]-mean)/std;
+function computeZ(h) {
+  const m = h.reduce((a,b)=>a+b,0)/h.length;
+  const s = Math.sqrt(h.reduce((a,v)=>a+Math.pow(v-m,2),0)/(h.length-1)) || 1;
+  return (h[h.length-1]-m)/s;
 }
-function computeAndRender(){
-  const results=INDICATORS.map(ind=>{
-    const dat=liveData[ind.id]||FALLBACK[ind.id];
-    const hist=dat.history||FALLBACK[ind.id].history;
-    let z=computeZ(hist);
-    if(ind.inverted)z=-z;
-    return{...ind,value:dat.value,history:hist,z,contrib:z*ind.weight};
+
+function computeAndRender() {
+  const res = INDICATORS.map(i => {
+    const d = liveData[i.id] || FALLBACK[i.id];
+    let z = computeZ(d.history); if(i.inverted) z = -z;
+    return { ...i, value: d.value, z, contrib: z*i.weight };
   });
-  const scoreFinal=parseFloat(Math.max(-10,Math.min(10,results.reduce((s,r)=>s+r.contrib,0)*3)).toFixed(2));
-  lastResults=results;lastScore=scoreFinal;
-  renderScore(scoreFinal);renderMetrics(results);renderContrib(results);buildLineChart();buildRadarChart(results);
-  const el=document.getElementById('st-score');
-  el.textContent=`Score: ${scoreFinal>=0?'+':''}${scoreFinal.toFixed(2)}`;
-  el.className='status-pill pill-ok';el.dataset.state='ok';
-  const d=new Date().toLocaleString(lang==='fr'?'fr-FR':'en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  document.getElementById('lastUpdate').textContent=t('lastUpdateFmt',d);
-  document.getElementById('aiRefreshBtn').disabled=false;
-  runAI(results,scoreFinal);
+  const score = parseFloat(Math.max(-10, Math.min(10, res.reduce((a,b)=>a+b.contrib,0)*3)).toFixed(2));
+  renderScore(score); renderMetrics(res); runAI(res, score);
 }
 
-function renderScore(score){
-  const el=document.getElementById('scoreNum'),badge=document.getElementById('scoreBadge'),txt=document.getElementById('badgeText');
-  el.textContent=(score>=0?'+':'')+score.toFixed(2);
-  if(score>=2){el.style.color='#22d3a0';badge.className='score-badge badge-bull';txt.textContent=t('bull');}
-  else if(score<=-2){el.style.color='#f05252';badge.className='score-badge badge-bear';txt.textContent=t('bear');}
-  else{el.style.color='#f5a623';badge.className='score-badge badge-neu';txt.textContent=t('neu');}
+function renderScore(s) {
+  const el = document.getElementById('scoreNum'); el.textContent = (s>=0?'+':'')+s;
+  const b = document.getElementById('scoreBadge');
+  b.className = 'score-badge ' + (s>=2?'badge-bull':s<=-2?'badge-bear':'badge-neu');
+  document.getElementById('badgeText').textContent = s>=2?t('bull'):s<=-2?t('bear'):t('neu');
 }
-function renderMetricSkeletons(){
-  document.getElementById('metricsGrid').innerHTML=INDICATORS.map(ind=>`
-    <div class="metric-card metric-loading" id="mc-${ind.id}">
-      <div class="metric-ticker">${ind.ticker}</div><div class="metric-name">${ind.name}</div>
-      <div class="metric-value">—</div><div class="metric-z z-muted">Z: —</div>
-      <div class="metric-weight">${t('weightLbl',ind.weight*100|0)}</div>
+
+function renderMetrics(res) {
+  document.getElementById('metricsGrid').innerHTML = res.map(r => `
+    <div class="metric-card">
+      <div class="metric-name">${r.name}</div>
+      <div class="metric-value">${r.value.toFixed(2)}</div>
+      <div style="color:${r.z>=0?'#22d3a0':'#f05252'}">Z: ${r.z.toFixed(2)}σ</div>
     </div>`).join('');
-}
-function renderMetrics(results){
-  results.forEach(r=>{
-    const el=document.getElementById(`mc-${r.id}`);if(!el)return;
-    const zClass=r.z>0.3?'z-green':r.z<-0.3?'z-red':'z-muted';
-    const valStr=r.value!=null?(r.value<10?r.value.toFixed(2):r.value.toFixed(0)):'—';
-    el.className='metric-card';
-    el.innerHTML=`<div class="metric-ticker">${r.ticker}</div><div class="metric-name">${r.name}</div>
-      <div class="metric-value">${valStr} <span style="font-size:10px;color:var(--muted);">${r.display}</span></div>
-      <div class="metric-z ${zClass}">Z: ${r.z>=0?'+':''}${r.z.toFixed(2)}σ</div>
-      <div class="metric-weight">${t('weightLbl',r.weight*100|0)}${r.inverted?t('invLbl'):''}</div>`;
-  });
-}
-function renderContrib(results){
-  const sorted=[...results].sort((a,b)=>b.contrib-a.contrib);
-  const maxAbs=Math.max(...sorted.map(r=>Math.abs(r.contrib)));
-  document.getElementById('contribList').innerHTML=sorted.map(r=>{
-    const pct=maxAbs>0?Math.abs(r.contrib)/maxAbs*100:0;
-    const color=r.contrib>=0?'#22d3a0':'#f05252';
-    return`<div class="contrib-row"><div class="contrib-lbl">${r.name.split(' ')[0]}</div>
-      <div class="contrib-track"><div class="contrib-fill" style="width:${pct.toFixed(1)}%;background:${color};${r.contrib<0?'margin-left:auto;':''}"></div></div>
-      <div class="contrib-num" style="color:${color};">${r.contrib>=0?'+':''}${r.contrib.toFixed(3)}</div></div>`;
-  }).join('');
-}
-function buildLineChart(){
-  const hist=(liveData.cpi||FALLBACK.cpi).history;
-  const n=Math.min(24,hist.length);
-  const locale=lang==='fr'?'fr-FR':'en-GB';
-  const labels=Array.from({length:n},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-(n-1-i));return d.toLocaleDateString(locale,{month:'short',year:'2-digit'});});
-  const allInds=INDICATORS.map(ind=>liveData[ind.id]||FALLBACK[ind.id]);
-  const scores=Array.from({length:n},(_,i)=>{
-    let s=0;
-    INDICATORS.forEach((ind,j)=>{const h=allInds[j].history||FALLBACK[ind.id].history;const idx=h.length-n+i;if(idx<5)return;let z=computeZ(h.slice(Math.max(0,idx-59),idx+1));if(ind.inverted)z=-z;s+=z*ind.weight;});
-    return parseFloat(Math.max(-10,Math.min(10,s*3)).toFixed(2));
-  });
-  if(lineChartInst)lineChartInst.destroy();
-  lineChartInst=new Chart(document.getElementById('lineChart'),{
-    type:'line',data:{labels,datasets:[{data:scores,borderColor:'#8b7cf8',backgroundColor:'rgba(139,124,248,0.07)',borderWidth:2,pointRadius:2.5,fill:true,tension:0.35,pointBackgroundColor:scores.map(v=>v>=2?'#22d3a0':v<=-2?'#f05252':'#f5a623')}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a2235',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#6b7a99',bodyColor:'#e8edf5',callbacks:{label:c=>` Score: ${c.raw>0?'+':''}${c.raw}`}}},
-      scales:{x:{ticks:{color:'#6b7a99',font:{size:10},maxRotation:45},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.08)'}},
-              y:{ticks:{color:'#6b7a99',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'},border:{color:'rgba(255,255,255,0.08)'},suggestedMin:-3,suggestedMax:3}}}
-  });
-}
-function updateLineChartLocale(){
-  if(!lineChartInst)return;
-  const hist=(liveData.cpi||FALLBACK.cpi).history;const n=Math.min(24,hist.length);
-  const locale=lang==='fr'?'fr-FR':'en-GB';
-  lineChartInst.data.labels=Array.from({length:n},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-(n-1-i));return d.toLocaleDateString(locale,{month:'short',year:'2-digit'});});
-  lineChartInst.update();
-}
-function buildRadarChart(results){
-  if(radarChartInst)radarChartInst.destroy();
-  radarChartInst=new Chart(document.getElementById('radarChart'),{
-    type:'radar',data:{labels:results.map(r=>r.name.split(' ')[0]+(r.inverted?'*':'')),
-      datasets:[{data:results.map(r=>parseFloat(r.z.toFixed(2))),borderColor:'#8b7cf8',backgroundColor:'rgba(139,124,248,0.12)',borderWidth:2,pointBackgroundColor:results.map(r=>r.z>0?'#22d3a0':'#f05252'),pointRadius:5}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{r:{ticks:{color:'#6b7a99',font:{size:10},backdropColor:'transparent'},grid:{color:'rgba(255,255,255,0.07)'},angleLines:{color:'rgba(255,255,255,0.07)'},pointLabels:{color:'#6b7a99',font:{size:11}},suggestedMin:-2.5,suggestedMax:2.5}}}
-  });
-}
-function setStatus(id,state,label){
-  const el=document.getElementById(id);
-  el.className='status-pill '+(state==='ok'?'pill-ok':state==='error'?'pill-error':'pill-loading');
-  el.dataset.state=state;if(label)el.textContent=label;
 }
 
 // AI — calls /api/claude (our Vercel proxy), no CORS issues
