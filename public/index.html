@@ -200,34 +200,63 @@ function renderMetrics(res) {
 }
 
 // AI — calls /api/claude (our Vercel proxy), no CORS issues
-async function runAI(results, score) {
+function runAI(results, score) {
   const aiBody = document.getElementById('aiBody');
   const btn = document.getElementById('aiRefreshBtn');
-  btn.disabled = true;
-  aiBody.className = 'ai-body ai-loading-text';
-  aiBody.textContent = "Génération de l'analyse Claude...";
+  aiBody.className = 'ai-body';
+  aiBody.style.color = 'var(--text)';
 
-  const label = score >= 2 ? "HAUSSIER" : score <= -2 ? "BAISSIER" : "NEUTRE";
-  const ctx = results.map(x => `- ${x.name}: Z=${x.z.toFixed(2)}σ`).join('\n');
+  // Helper to get specific indicator data
+  const getInd = (id) => results.find(r => r.id === id) || { z: 0, value: 0 };
+  const vix = getInd('vix');
+  const msci = getInd('msci');
+  const cpi = getInd('cpi');
+  const gdp = getInd('gdp');
 
-  try {
-    // THIS LINE IS THE KEY: It calls YOUR Vercel function, not Anthropic
-    const res = await fetch('/api/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ score, label, ctx })
-    });
+  let title = "";
+  let tone = "";
+  let analysis = "";
+  let strategy = "";
 
-    if (!res.ok) throw new Error('Erreur Serveur Vercel');
-
-    const data = await res.json();
-    aiBody.className = 'ai-body';
-    aiBody.style.color = 'var(--text)';
-    aiBody.innerHTML = data.text; // Displays the professional Claude response
-  } catch (e) {
-    console.error("AI Error:", e);
-    aiBody.textContent = "Erreur de connexion avec Claude via Vercel.";
+  // 1. Determine Market Regime based on Score and Volatility
+  if (score >= 2.5) {
+    title = "🚀 STRATÉGIE : EXPANSION ET RISK-ON";
+    tone = "Le baromètre indique un environnement de croissance robuste.";
+    analysis = `La forte impulsion du MSCI World (Z: ${msci.z.toFixed(2)}σ) et un VIX compressé suggèrent une phase de 'Goldilocks'. Le PIB (Z: ${gdp.z.toFixed(2)}σ) soutient cette dynamique cyclique.`;
+    strategy = "<strong>Allocation :</strong> Surpondérer les Actions (Growth & Tech). Réduire les positions de couverture (Hedges) et privilégier le levier modéré.";
+  } 
+  else if (score <= -2.5) {
+    title = "⚠️ STRATÉGIE : DÉFENSIF ET RISK-OFF";
+    tone = "Alerte de fragilité systémique détectée.";
+    analysis = `L'explosion de la volatilité (VIX Z: ${vix.z.toFixed(2)}σ) couplée à une dégradation des indices mondiaux signale une capitulation. Le score de ${score} reflète une aversion au risque extrême.`;
+    strategy = "<strong>Allocation :</strong> Maximiser le Cash et l'Or. Sous-pondérer massivement les Actions. Chercher refuge dans les Obligations d'État à long terme.";
+  } 
+  else if (Math.abs(cpi.z) > 1.5 && score < 0) {
+    title = "📉 STRATÉGIE : VIGILANCE INFLATIONNISTE";
+    tone = "Risque de stagflation ou de resserrement monétaire.";
+    analysis = `Le CPI (Z: ${cpi.z.toFixed(2)}σ) est l'indicateur dominant, pesant sur le score global. La pression sur les prix réduit les marges de manœuvre des banques centrales.`;
+    strategy = "<strong>Allocation :</strong> Privilégier les Matières Premières et les Actions 'Value' avec pouvoir de fixation des prix. Réduire la duration obligataire.";
   }
+  else {
+    title = "⚖️ STRATÉGIE : NEUTRE / RÉÉQUILIBRAGE";
+    tone = "Absence de tendance directionnelle claire.";
+    analysis = "Les forces de croissance et les risques de marché s'équilibrent. Le score proche de zéro suggère une phase de consolidation technique après les récents mouvements.";
+    strategy = "<strong>Allocation :</strong> Revenir aux poids du Benchmark. Privilégier la sélection de titres (Stock Picking) plutôt que l'exposition indicielle.";
+  }
+
+  // 2. Format the output to look like an AI report
+  aiBody.innerHTML = `
+    <div style="background: var(--purple-bg); padding: 12px; border-radius: 8px; border-left: 4px solid var(--purple); margin-bottom: 15px;">
+      <span style="font-family: 'DM Mono'; font-size: 11px; color: var(--purple); text-transform: uppercase;">Rapport de Stratégie IA</span>
+      <div style="font-weight: 600; font-size: 15px; margin-top: 4px;">${title}</div>
+    </div>
+    <p><em>${tone}</em></p>
+    <p style="margin: 12px 0;">${analysis}</p>
+    <div style="padding: 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px;">
+      ${strategy}
+    </div>
+  `;
+
   btn.disabled = false;
 }
 </script>
