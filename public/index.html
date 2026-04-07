@@ -200,30 +200,35 @@ function renderMetrics(res) {
 }
 
 // AI — calls /api/claude (our Vercel proxy), no CORS issues
-async function runAI(results,score){
-  const aiBody=document.getElementById('aiBody'),btn=document.getElementById('aiRefreshBtn');
-  btn.disabled=true;
-  aiBody.className='ai-body ai-loading-text';
-  aiBody.textContent=t('aiLoading');
-  const r=results||lastResults||[];
-  const s=score??lastScore??0;
-  const label=s>=2?t('bull'):s<=-2?t('bear'):t('neu');
-  const scoreStr=(s>=0?'+':'')+s.toFixed(2);
-  const ctx=r.map(x=>`- ${x.name} (${x.ticker}): valeur=${x.value!=null?x.value.toFixed(2):'N/A'} ${x.display}, Z=${x.z>=0?'+':''}${x.z.toFixed(2)}σ, contribution=${x.contrib>=0?'+':''}${x.contrib.toFixed(3)}, inversé=${x.inverted}`).join('\n');
-  try{
-    const res=await fetch('/api/claude',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:250,messages:[{role:'user',content:t('aiPrompt',scoreStr,label,ctx)}]})
+async function runAI(results, score) {
+  const aiBody = document.getElementById('aiBody');
+  const btn = document.getElementById('aiRefreshBtn');
+  btn.disabled = true;
+  aiBody.className = 'ai-body ai-loading-text';
+  aiBody.textContent = "Génération de l'analyse Claude...";
+
+  const label = score >= 2 ? "HAUSSIER" : score <= -2 ? "BAISSIER" : "NEUTRE";
+  const ctx = results.map(x => `- ${x.name}: Z=${x.z.toFixed(2)}σ`).join('\n');
+
+  try {
+    // THIS LINE IS THE KEY: It calls YOUR Vercel function, not Anthropic
+    const res = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ score, label, ctx })
     });
-    const data=await res.json();
-    const text=data.content?.map(b=>b.text||'').join('').trim();
-    if(!text)throw new Error('empty');
-    aiBody.className='ai-body';aiBody.style.color='';aiBody.textContent=text;
-  }catch(e){
-    aiBody.className='ai-body';aiBody.style.color='var(--red)';aiBody.textContent=t('aiError');
+
+    if (!res.ok) throw new Error('Erreur Serveur Vercel');
+
+    const data = await res.json();
+    aiBody.className = 'ai-body';
+    aiBody.style.color = 'var(--text)';
+    aiBody.innerHTML = data.text; // Displays the professional Claude response
+  } catch (e) {
+    console.error("AI Error:", e);
+    aiBody.textContent = "Erreur de connexion avec Claude via Vercel.";
   }
-  btn.disabled=false;
+  btn.disabled = false;
 }
 </script>
 </body>
